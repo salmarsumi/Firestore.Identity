@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30406.217
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMD.AspNetCore.Identity.Firestore", "src\SMD.AspNetCore.Identity.Firestore\SMD.AspNetCore.Identity.Firestore.csproj", "{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SMD.AspNetCore.Identity.Firestore", "src\SMD.AspNetCore.Identity.Firestore\SMD.AspNetCore.Identity.Firestore.csproj", "{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{BFE47649-5B32-4156-AE21-E85DFA5F6FC0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C4BDD907-4E79-4B27-A28B-83691C383647}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Firestore.Test", "test\Identity.Firestore.Test\Identity.Firestore.Test.csproj", "{BB15534E-C14C-4578-BC77-E8ABE603160F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,9 +33,25 @@ Global
 		{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8}.Release|x64.Build.0 = Release|Any CPU
 		{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8}.Release|x86.ActiveCfg = Release|Any CPU
 		{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8}.Release|x86.Build.0 = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|x64.Build.0 = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Debug|x86.Build.0 = Debug|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|x64.ActiveCfg = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|x64.Build.0 = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|x86.ActiveCfg = Release|Any CPU
+		{BB15534E-C14C-4578-BC77-E8ABE603160F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9EFD688B-BFC3-4FB7-BEFD-56303D8642B8} = {C4BDD907-4E79-4B27-A28B-83691C383647}
+		{BB15534E-C14C-4578-BC77-E8ABE603160F} = {BFE47649-5B32-4156-AE21-E85DFA5F6FC0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {367D4C1A-4740-4F0C-A443-14E26538A1E6}
