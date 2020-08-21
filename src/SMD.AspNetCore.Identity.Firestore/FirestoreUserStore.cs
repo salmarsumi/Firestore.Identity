@@ -616,11 +616,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 .SetAsync(new Dictionary<string, object>
                 {
                     { 
-                        "Claims", claims.Select(c => new Dictionary<string, object>
-                        { 
-                            { "Type", c.Type },
-                            { "Value", c.Value } 
-                        }).ToArray() 
+                        "Claims", claims.Select(c => c.ToDictionary()).ToArray() 
                     }
                 }, options: SetOptions.MergeAll)
                 .ConfigureAwait(false);
@@ -654,16 +650,8 @@ namespace SMD.AspNetCore.Identity.Firestore
 
             // batch the update requests in one atomic operation
             var batch = DB.StartBatch();
-            batch.Update(docRef, "Claims", FieldValue.ArrayRemove(new Dictionary<string, object>
-            {
-                { "Type", claim.Type },
-                { "Value", claim.Value }
-            }));
-            batch.Update(docRef, "Claims", FieldValue.ArrayUnion(new Dictionary<string, object>
-            {
-                { "Type", newClaim.Type },
-                { "Value", newClaim.Value }
-            }));
+            batch.Update(docRef, "Claims", FieldValue.ArrayRemove(claim.ToDictionary()));
+            batch.Update(docRef, "Claims", FieldValue.ArrayUnion(newClaim.ToDictionary()));
 
             return batch.CommitAsync(cancellationToken);
         }
