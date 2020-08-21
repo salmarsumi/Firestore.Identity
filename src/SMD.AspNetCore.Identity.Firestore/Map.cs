@@ -1,10 +1,9 @@
-﻿using Google.Cloud.Firestore;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
-using System.Text;
 
+[assembly: InternalsVisibleTo("Identity.Firestore.Test")]
 namespace SMD.AspNetCore.Identity.Firestore
 {
     internal static class Map
