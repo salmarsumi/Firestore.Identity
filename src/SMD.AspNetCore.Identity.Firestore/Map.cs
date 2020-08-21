@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 
 namespace SMD.AspNetCore.Identity.Firestore
@@ -13,6 +14,15 @@ namespace SMD.AspNetCore.Identity.Firestore
             return source.GetType().GetProperties().ToDictionary(
                 p => p.Name,
                 p => p.GetValue(source, null));
+        }
+
+        public static IDictionary<string, object> ToDictionary(this Claim claim)
+        {
+            return new Dictionary<string, object>
+            {
+                { "Type", claim.Type },
+                { "Value", claim.Value }
+            };
         }
 
         public static T ToObject<T>(this IDictionary<string, object> source) where T : new()
