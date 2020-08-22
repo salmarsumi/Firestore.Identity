@@ -14,6 +14,7 @@ namespace SMD.AspNetCore.Identity.Firestore
             internal const string UserRoles = "user-roles";
             internal const string UserLogins = "user-logins";
             internal const string UserTokens = "user-tokens";
+            internal const string RoleClaims = "role-claims";
         }
     }
 }
