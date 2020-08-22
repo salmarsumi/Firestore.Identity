@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -198,7 +197,27 @@ namespace SMD.AspNetCore.Identity.Firestore
                     return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
                 }
 
-                // todo: delete othor user related data
+                // delete the user logins
+                var loginSnapshots = await UserLogins.WhereEqualTo("UserId", user.Id).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+                if(loginSnapshots.Count > 0)
+                {
+                    foreach(var login in loginSnapshots)
+                    {
+                        transaction.Delete(login.Reference);
+                    }
+                }
+                // delete the user tokens
+                var tokenSnapshots = await UserTokens.WhereEqualTo("UserId", user.Id).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+                if (tokenSnapshots.Count > 0)
+                {
+                    foreach (var token in tokenSnapshots)
+                    {
+                        transaction.Delete(token.Reference);
+                    }
+                }
+
+                // delete the user claims
+                transaction.Delete(UserClaims.Document(user.Id));
 
                 transaction.Delete(doc);
 
