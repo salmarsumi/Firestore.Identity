@@ -60,7 +60,6 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// </summary>
     /// <typeparam name="TUser">The type representing a user.</typeparam>
     /// <typeparam name="TRole">The type representing a role.</typeparam>
-    /// <typeparam name="TKey">The type of the primary key for a role.</typeparam>
     /// <typeparam name="TUserClaim">The type representing a claim.</typeparam>
     /// <typeparam name="TUserRole">The type representing a user role.</typeparam>
     /// <typeparam name="TUserLogin">The type representing a user external login.</typeparam>
