@@ -84,6 +84,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         public FirestoreUserStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
+            _userOperations = new FirebaseUserStoreOperations<TUser, TUserLogin, TUserToken>(DB, ErrorDescriber);
         }
 
         /// <summary>
@@ -96,17 +97,11 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         private CollectionReference UsersSet { get { return DB.Collection(Constants.Collections.Users); } }
         private CollectionReference Roles { get { return DB.Collection(Constants.Collections.Roles); } }
-        private CollectionReference UserTokens { get { return DB.Collection(Constants.Collections.UserTokens); } }
-        private CollectionReference UserLogins { get { return DB.Collection(Constants.Collections.UserLogins); } }
-        private CollectionReference UserClaims { get { return DB.Collection(Constants.Collections.UserClaims); } }
 
         /// <summary>
-        /// Gets a reference to the user claims subcollection.
+        /// Shared user store opertations object
         /// </summary>
-        /// <param name="userId">The user ID</param>
-        /// <returns>The <see cref="CollectionReference"/> that represents the User Claims subcollection.</returns>
-        //private CollectionReference UserClaims(string userId) => DB.Collection(Constants.Collections.Users).Document(userId).Collection(Constants.Collections.UserClaims);
-
+        private readonly FirebaseUserStoreOperations<TUser, TUserLogin, TUserToken> _userOperations;
 
         /// <summary>
         /// Creates the specified <paramref name="user"/> in the user store.
@@ -114,7 +109,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="user">The user to create.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the creation operation.</returns>
-        public async override Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken = default)
+        public override Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -123,14 +118,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // create a new document reference and use the generated Id
-            var doc = UsersSet.Document();
-            user.Id = doc.Id;
-
-            // save the user document
-            await doc.CreateAsync(user.ToDictionary(), cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            return IdentityResult.Success;
+            return _userOperations.CreateAsync(user, cancellationToken);
         }
 
         /// <summary>
@@ -148,24 +136,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // get the stored user document reference
-            var doc = UsersSet.Document(user.Id);
-
-            var result = DB.RunTransactionAsync(async transaction =>
-            {
-                var snapshot = await transaction.GetSnapshotAsync(doc, cancellationToken).ConfigureAwait(false);
-
-                if (!snapshot.Exists || snapshot.GetValue<string>("ConcurrencyStamp") != user.ConcurrencyStamp)
-                {
-                    return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-                }
-
-                transaction.Update(doc, user.ToDictionary());
-
-                return IdentityResult.Success;
-            }, cancellationToken: cancellationToken);
-
-            return result;
+            return _userOperations.UpdateAsync(user, cancellationToken);
         }
 
         /// <summary>
@@ -183,47 +154,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // get the stored user document reference
-            var doc = UsersSet.Document(user.Id);
-
-            var result = DB.RunTransactionAsync(async transaction =>
-            {
-                var snapshot = await transaction.GetSnapshotAsync(doc, cancellationToken).ConfigureAwait(false);
-
-                // check if the user was deleted or updated while running the transaction
-                if (!snapshot.Exists || snapshot.GetValue<string>("ConcurrencyStamp") != user.ConcurrencyStamp)
-                {
-                    return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-                }
-
-                // delete the user logins
-                var loginSnapshots = await UserLogins.WhereEqualTo("UserId", user.Id).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-                if(loginSnapshots.Count > 0)
-                {
-                    foreach(var login in loginSnapshots)
-                    {
-                        transaction.Delete(login.Reference);
-                    }
-                }
-                // delete the user tokens
-                var tokenSnapshots = await UserTokens.WhereEqualTo("UserId", user.Id).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-                if (tokenSnapshots.Count > 0)
-                {
-                    foreach (var token in tokenSnapshots)
-                    {
-                        transaction.Delete(token.Reference);
-                    }
-                }
-
-                // delete the user claims
-                transaction.Delete(UserClaims.Document(user.Id));
-
-                transaction.Delete(doc);
-
-                return IdentityResult.Success;
-            }, cancellationToken: cancellationToken);
-
-            return result;
+            return _userOperations.DeleteAsync(user, cancellationToken);
         }
 
         /// <summary>
@@ -234,7 +165,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The <see cref="Task"/> that represents the asynchronous operation, containing the user matching the specified <paramref name="userId"/> if it exists.
         /// </returns>
-        public async override Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
+        public override Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -244,14 +175,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(userId));
             }
 
-            var snapshot = await UsersSet.Document(userId).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-
-            if (snapshot.Exists)
-            {
-                return snapshot.ToDictionary().ToObject<TUser>();
-            }
-
-            return default;
+            return _userOperations.FindByIdAsync(userId, cancellationToken);
         }
 
         /// <summary>
@@ -262,7 +186,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The <see cref="Task"/> that represents the asynchronous operation, containing the user matching the specified <paramref name="normalizedUserName"/> if it exists.
         /// </returns>
-        public override async Task<TUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default)
+        public override Task<TUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -272,13 +196,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(normalizedUserName));
             }
 
-            var snapshots = await UsersSet.WhereEqualTo("NormalizedUserName", normalizedUserName).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-            if(snapshots.Count > 0)
-            {
-                return snapshots[0].ToDictionary().ToObject<TUser>();
-            }
-
-            return default;
+            return _userOperations.FindByNameAsync(normalizedUserName, cancellationToken);
         }
 
         /// <summary>
@@ -291,8 +209,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         {
             get
             {
-                var docs = UsersSet.GetSnapshotAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                return docs.Select(d => d.ToDictionary().ToObject<TUser>()).AsQueryable();
+                return _userOperations.GetAllUsersAsQueryable();
             }
         }
 
@@ -304,9 +221,6 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>The role if it exists.</returns>
         protected override async Task<TRole> FindRoleAsync(string normalizedRoleName, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
-
             if (string.IsNullOrEmpty(normalizedRoleName))
             {
                 throw new ArgumentNullException(nameof(normalizedRoleName));
@@ -330,9 +244,6 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>The user role if it exists.</returns>
         protected override async Task<TUserRole> FindUserRoleAsync(string userId, string roleId, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
-
             if (string.IsNullOrEmpty(userId))
             {
                 throw new ArgumentNullException(nameof(userId));
@@ -382,11 +293,8 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="providerKey">The key provided by the <paramref name="loginProvider"/> to identify a user.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The user login if it exists.</returns>
-        protected override async Task<TUserLogin> FindUserLoginAsync(string userId, string loginProvider, string providerKey, CancellationToken cancellationToken)
+        protected override Task<TUserLogin> FindUserLoginAsync(string userId, string loginProvider, string providerKey, CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
-
             if (string.IsNullOrEmpty(userId))
             {
                 throw new ArgumentNullException(nameof(userId));
@@ -402,18 +310,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(providerKey));
             }
 
-            var snapshots = await UserLogins
-                .WhereEqualTo("UserId", userId)
-                .WhereEqualTo("LoginProvider", loginProvider)
-                .WhereEqualTo("ProviderKey", providerKey)
-                .GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-
-            if(snapshots.Count > 0)
-            {
-                return snapshots[0].ToDictionary().ToObject<TUserLogin>();
-            }
-
-            return default;
+            return _userOperations.FindUserLoginAsync(userId, loginProvider, providerKey, cancellationToken);
         }
 
         /// <summary>
@@ -423,11 +320,8 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="providerKey">The key provided by the <paramref name="loginProvider"/> to identify a user.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The user login if it exists.</returns>
-        protected override async Task<TUserLogin> FindUserLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+        protected override Task<TUserLogin> FindUserLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
-
             if (string.IsNullOrEmpty(loginProvider))
             {
                 throw new ArgumentNullException(nameof(loginProvider));
@@ -438,17 +332,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(providerKey));
             }
 
-            var snapshots = await UserLogins
-                .WhereEqualTo("LoginProvider", loginProvider)
-                .WhereEqualTo("ProviderKey", providerKey)
-                .GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-
-            if (snapshots.Count > 0)
-            {
-                return snapshots[0].ToDictionary().ToObject<TUserLogin>();
-            }
-
-            return default;
+            return _userOperations.FindUserLoginAsync(loginProvider, providerKey, cancellationToken);
         }
 
         /// <summary>
@@ -591,7 +475,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="user">The user whose claims should be retrieved.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>A <see cref="Task{TResult}"/> that contains the claims granted to a user.</returns>
-        public async override Task<IList<Claim>> GetClaimsAsync(TUser user, CancellationToken cancellationToken = default)
+        public override Task<IList<Claim>> GetClaimsAsync(TUser user, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
             if (user is null)
@@ -599,16 +483,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            var snapshot = await UserClaims.Document(user.Id)
-                .GetSnapshotAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (snapshot.TryGetValue<Dictionary<string, object>[]>("Claims", out var claims))
-            {
-                return claims.Select(c => new Claim(c["Type"].ToString(), c["Value"].ToString())).ToList();
-            }
-
-            return new List<Claim>();
+            return _userOperations.GetClaimsAsync(user, cancellationToken);
         }
 
         /// <summary>
@@ -618,7 +493,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="claims">The claim to add to the user.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        public override async Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default)
+        public override Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
             if (user is null)
@@ -630,14 +505,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(claims));
             }
 
-            await UserClaims.Document(user.Id)
-                .SetAsync(new Dictionary<string, object>
-                {
-                    { 
-                        "Claims", claims.Select(c => c.ToDictionary()).ToArray() 
-                    }
-                }, options: SetOptions.MergeAll)
-                .ConfigureAwait(false);
+            return _userOperations.AddClaimsAsync(user, claims, cancellationToken);
         }
 
         /// <summary>
@@ -664,14 +532,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(newClaim));
             }
 
-            var docRef = UserClaims.Document(user.Id);
-
-            // batch the update requests in one atomic operation
-            var batch = DB.StartBatch();
-            batch.Update(docRef, "Claims", FieldValue.ArrayRemove(claim.ToDictionary()));
-            batch.Update(docRef, "Claims", FieldValue.ArrayUnion(newClaim.ToDictionary()));
-
-            return batch.CommitAsync(cancellationToken);
+            return _userOperations.ReplaceClaimAsync(user, claim, newClaim, cancellationToken);
         }
 
         /// <summary>
@@ -693,32 +554,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(claims));
             }
 
-            var docRef = UserClaims.Document(user.Id);
-
-            return DB.RunTransactionAsync(async transaction =>
-            {
-                // manipulate the array client side and then save the updates.
-                // this will elemenate the need for multiple writes
-                var snapshot = await docRef
-                .GetSnapshotAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-                if (snapshot.Exists && snapshot.TryGetValue<Dictionary<string, object>[]>("Claims", out var claimArray))
-                {
-                    var newClaims = claimArray
-                        .Where(c => !claims
-                            .Any(cc =>
-                                cc.Type == c["Type"].ToString() &&
-                                cc.Value == c["Value"].ToString()
-                                )
-                            ).ToArray();
-
-                    transaction.Set(docRef, new Dictionary<string, object>
-                    {
-                        { "Claims", newClaims }
-                    }, SetOptions.Overwrite);
-                }
-            }, cancellationToken: cancellationToken);
+            return _userOperations.RemoveClaimsAsync(user, claims, cancellationToken);
         }
 
         /// <summary>
@@ -742,7 +578,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(login));
             }
 
-            return UserLogins.AddAsync(CreateUserLogin(user, login).ToDictionary(), cancellationToken);            
+            return _userOperations.AddLoginAsync(CreateUserLogin(user, login), cancellationToken);         
         }
 
         /// <summary>
@@ -753,8 +589,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="providerKey">The key provided by the <paramref name="loginProvider"/> to identify a user.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        public override Task RemoveLoginAsync(TUser user, string loginProvider, string providerKey,
-            CancellationToken cancellationToken = default)
+        public override Task RemoveLoginAsync(TUser user, string loginProvider, string providerKey, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -763,23 +598,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            return DB.RunTransactionAsync(async transaction =>
-            {
-                var snapshots = await UserLogins
-                    .WhereEqualTo("UserId", user.Id)
-                    .WhereEqualTo("LoginProvider", loginProvider)
-                    .WhereEqualTo("ProviderKey", providerKey)
-                    .GetSnapshotAsync(cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (snapshots.Count > 0)
-                {
-                    foreach(var doc in snapshots)
-                    {
-                        transaction.Delete(doc.Reference);
-                    }
-                }
-            }, cancellationToken: cancellationToken);
+            return _userOperations.RemoveLoginAsync(user, loginProvider, providerKey, cancellationToken);
         }
 
         /// <summary>
@@ -790,7 +609,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The <see cref="Task"/> for the asynchronous operation, containing a list of <see cref="UserLoginInfo"/> for the specified <paramref name="user"/>, if any.
         /// </returns>
-        public async override Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user, CancellationToken cancellationToken = default)
+        public override Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -799,13 +618,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(user));
             }
 
-            var snapshots = await UserLogins.WhereEqualTo("UserId", user.Id).GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
-
-            return snapshots.Select(d => new UserLoginInfo(
-                d.GetValue<string>("LoginProvider"),
-                d.GetValue<string>("ProviderKey"),
-                d.GetValue<string>("ProviderDisplayName")))
-                .ToList();
+            return _userOperations.GetLoginsAsync(user, cancellationToken);
         }
 
         /// <summary>
@@ -817,17 +630,12 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The <see cref="Task"/> for the asynchronous operation, containing the user, if any which matched the specified login provider and key.
         /// </returns>
-        public async override Task<TUser> FindByLoginAsync(string loginProvider, string providerKey,
-            CancellationToken cancellationToken = default)
+        public override Task<TUser> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
-            var userLogin = await FindUserLoginAsync(loginProvider, providerKey, cancellationToken);
-            if (userLogin != null)
-            {
-                return await FindUserAsync(userLogin.UserId, cancellationToken);
-            }
-            return null;
+
+            return _userOperations.FindByLoginAsync(loginProvider, providerKey, cancellationToken);
         }
 
         /// <summary>
@@ -838,22 +646,12 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The task object containing the results of the asynchronous lookup operation, the user if any associated with the specified normalized email address.
         /// </returns>
-        public async override Task<TUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
+        public override Task<TUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
 
-            var snapshot = await UsersSet
-                .WhereEqualTo("NormalizedEmail", normalizedEmail)
-                .GetSnapshotAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if(snapshot.Count > 0)
-            {
-                return snapshot[0].ToDictionary().ToObject<TUser>();
-            }
-
-            return default;
+            return _userOperations.FindByEmailAsync(normalizedEmail, cancellationToken);
         }
 
         /// <summary>
@@ -864,32 +662,16 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns>
         /// The <see cref="Task"/> contains a list of users, if any, that contain the specified claim.
         /// </returns>
-        public async override Task<IList<TUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken = default)
+        public override Task<IList<TUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
-            if (claim == null)
+            if (claim is null)
             {
                 throw new ArgumentNullException(nameof(claim));
             }
 
-            var snapshots = await UserClaims
-                .WhereArrayContains("Claims", claim.ToDictionary())
-                .GetSnapshotAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if(snapshots.Count > 0)
-            {
-                var docRefs = snapshots.Select(d => UsersSet.Document(d.Id));
-                var usersSnapshots = await DB.GetAllSnapshotsAsync(docRefs, cancellationToken).ConfigureAwait(false);
-
-                if(usersSnapshots.Count > 0)
-                {
-                    return usersSnapshots.Select(d => d.ToDictionary().ToObject<TUser>()).ToList();
-                }
-            }
-
-            return new List<TUser>();
+            return _userOperations.GetUsersForClaimAsync(claim, cancellationToken);
         }
 
         /// <summary>
@@ -938,10 +720,8 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="name">The name of the token.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The user token if it exists.</returns>
-        protected override async Task<TUserToken> FindTokenAsync(TUser user, string loginProvider, string name, CancellationToken cancellationToken)
+        protected override Task<TUserToken> FindTokenAsync(TUser user, string loginProvider, string name, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            ThrowIfDisposed();
             if (user is null)
             {
                 throw new ArgumentNullException(nameof(user));
@@ -955,19 +735,7 @@ namespace SMD.AspNetCore.Identity.Firestore
                 throw new ArgumentNullException(nameof(name));
             }
 
-            var snapshots = await UserTokens
-                .WhereEqualTo("UserId", user.Id)
-                .WhereEqualTo("LoginProvider", loginProvider)
-                .WhereEqualTo("Name", name)
-                .GetSnapshotAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if(snapshots.Count > 0)
-            {
-                return snapshots[0].ToDictionary().ToObject<TUserToken>();
-            }
-
-            return default;
+            return _userOperations.FindTokenAsync(user, loginProvider, name, cancellationToken);
         }
 
         /// <summary>
@@ -977,13 +745,12 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <returns></returns>
         protected override Task AddUserTokenAsync(TUserToken token)
         {
-            ThrowIfDisposed();
             if (token is null)
             {
                 throw new ArgumentNullException(nameof(token));
             }
 
-            return UserTokens.AddAsync(token.ToDictionary());
+            return _userOperations.AddUserTokenAsync(token);
         }
 
         /// <summary>
@@ -991,25 +758,14 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="token">The token to be removed.</param>
         /// <returns></returns>
-        protected override async Task RemoveUserTokenAsync(TUserToken token)
+        protected override Task RemoveUserTokenAsync(TUserToken token)
         {
-            ThrowIfDisposed();
             if (token is null)
             {
                 throw new ArgumentNullException(nameof(token));
             }
 
-            var snapshots = await UserTokens
-                .WhereEqualTo("UserId", token.UserId)
-                .WhereEqualTo("LoginProvider", token.LoginProvider)
-                .WhereEqualTo("Name", token.Name)
-                .GetSnapshotAsync()
-                .ConfigureAwait(false);
-
-            if(snapshots.Count > 0)
-            {
-                await UserTokens.Document(snapshots[0].Id).DeleteAsync();
-            }
+            return _userOperations.RemoveUserTokenAsync(token);
         }
     }
 }
