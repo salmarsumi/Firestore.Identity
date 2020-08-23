@@ -107,6 +107,8 @@ namespace SMD.AspNetCore.Identity.Firestore
             // get the stored role document reference
             var doc = RolesSet.Document(role.Id);
 
+            // transactions have a limit of processing 500 documents only
+            // this approach might not work for a large number of users
             var result = DB.RunTransactionAsync(async transaction =>
             {
                 var snapshot = await transaction.GetSnapshotAsync(doc, cancellationToken).ConfigureAwait(false);
@@ -117,11 +119,36 @@ namespace SMD.AspNetCore.Identity.Firestore
                 }
 
                 // check if the role name was changed
-                if(role.Name != snapshot.GetValue<string>("Name"))
+                var oldName = snapshot.GetValue<string>("Name");
+                if (role.Name != oldName)
                 {
-                    // todo: update the user copy of the role data
-                   // var userSnapshots = await DB.Collection(Constants.Collections.Users)
-                   //    .WhereArrayContains("Roles", )
+                    // update the user copy of the role data
+                    var oldElement = new Dictionary<string, object>
+                    {
+                        { "RoleId", role.Id },
+                        { "RoleName", oldName }
+                    };
+
+                    var userSnapshots = await DB.Collection(Constants.Collections.Users)
+                       .WhereArrayContains("Roles", oldElement)
+                       .GetSnapshotAsync(cancellationToken)
+                       .ConfigureAwait(false);
+
+                    if(userSnapshots.Count > 0)
+                    {
+                        var newElement = new Dictionary<string, object>
+                        {
+                            { "RoleId", role.Id },
+                            { "RoleName", role.Name }
+                        };
+
+                        // todo: test for a better way to update the roles array
+                        foreach (var userDoc in userSnapshots)
+                        {
+                            transaction.Update(DB.Collection(Constants.Collections.Users).Document(userDoc.Id), "Roles", FieldValue.ArrayRemove(oldElement));
+                            transaction.Update(DB.Collection(Constants.Collections.Users).Document(userDoc.Id), "Roles", FieldValue.ArrayUnion(newElement));
+                        }
+                    }
                 }
 
                 transaction.Update(doc, role.ToDictionary());
@@ -160,7 +187,26 @@ namespace SMD.AspNetCore.Identity.Firestore
                     return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
                 }
 
-                // todo: delete othor role related data
+                // delete othor role related data
+                transaction.Delete(RoleClaims.Document(role.Id));
+
+                var roleElement = new Dictionary<string, object>
+                {
+                    { "RoleId", role.Id },
+                    { "RoleName", role.Name }
+                };
+                var userSnapshots = await DB.Collection(Constants.Collections.Users)
+                       .WhereArrayContains("Roles", roleElement)
+                       .GetSnapshotAsync(cancellationToken)
+                       .ConfigureAwait(false);
+
+                if (userSnapshots.Count > 0)
+                {
+                    foreach (var userDoc in userSnapshots)
+                    {
+                        transaction.Update(DB.Collection(Constants.Collections.Users).Document(userDoc.Id), "Roles", FieldValue.ArrayRemove(roleElement));
+                    }
+                }
 
                 transaction.Delete(doc);
 
