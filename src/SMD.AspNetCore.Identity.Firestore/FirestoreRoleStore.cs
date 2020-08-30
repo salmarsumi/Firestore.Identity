@@ -14,7 +14,7 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// Creates a new instance of a persistence store for roles.
     /// </summary>
     /// <typeparam name="TRole">The type of the class representing a role.</typeparam>
-    public class RoleStore<TRole> : RoleStore<TRole, IdentityUserRole<string>, IdentityRoleClaim<string>>,
+    public class FirestoreRoleStore<TRole> : FirestoreRoleStore<TRole, IdentityUserRole<string>, IdentityRoleClaim<string>>,
         IQueryableRoleStore<TRole>,
         IRoleClaimStore<TRole>
         where TRole : IdentityRole<string>, new()
@@ -24,7 +24,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public RoleStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreRoleStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// <typeparam name="TRole">The type of the class representing a role.</typeparam>
     /// <typeparam name="TUserRole">The type of the class representing a user role.</typeparam>
     /// <typeparam name="TRoleClaim">The type of the class representing a role claim.</typeparam>
-    public class RoleStore<TRole, TUserRole, TRoleClaim> :
+    public class FirestoreRoleStore<TRole, TUserRole, TRoleClaim> :
         IQueryableRoleStore<TRole>,
         IRoleClaimStore<TRole>
         where TRole : IdentityRole<string>, new()
@@ -45,7 +45,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public RoleStore(FirestoreDb db, IdentityErrorDescriber describer = null)
+        public FirestoreRoleStore(FirestoreDb db, IdentityErrorDescriber describer = null)
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
             ErrorDescriber = describer ?? new IdentityErrorDescriber();
@@ -325,7 +325,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="role">The role whose normalized name should be retrieved.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>A <see cref="Task{TResult}"/> that contains the name of the role.</returns>
-        public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken = default(CancellationToken))
+        public virtual Task<string> GetNormalizedRoleNameAsync(TRole role, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -343,7 +343,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="normalizedName">The normalized name to set</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken = default(CancellationToken))
+        public virtual Task SetNormalizedRoleNameAsync(TRole role, string normalizedName, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
@@ -417,12 +417,7 @@ namespace SMD.AspNetCore.Identity.Firestore
             }
 
             await RoleClaims.Document(role.Id)
-                .SetAsync(new Dictionary<string, object>
-                {
-                    {
-                        "Claims", new[] { claim.ToDictionary() }
-                    }
-                }, options: SetOptions.MergeAll)
+                .UpdateAsync("Claims", FieldValue.ArrayUnion(claim.ToDictionary()), Precondition.None, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -433,7 +428,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <param name="claim">The claim to remove from the role.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        public async virtual Task RemoveClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default(CancellationToken))
+        public async virtual Task RemoveClaimAsync(TRole role, Claim claim, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
             if (role == null)

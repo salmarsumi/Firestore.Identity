@@ -179,13 +179,14 @@ namespace SMD.AspNetCore.Identity.Firestore
 
         internal Task AddClaimsAsync(TUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
         {
-            return UserClaims.Document(user.Id)
-                .SetAsync(new Dictionary<string, object>
-                {
-                    {
-                        "Claims", claims.Select(c => c.ToDictionary()).ToArray()
-                    }
-                }, options: SetOptions.MergeAll, cancellationToken);
+            var docRef = UserClaims.Document(user.Id);
+
+            var batch = _db.StartBatch();
+            foreach(var claim in claims)
+            {
+                batch.Update(docRef, "Claims", FieldValue.ArrayUnion(claim.ToDictionary()), Precondition.None);
+            }
+            return batch.CommitAsync(cancellationToken);
         }
 
         internal Task ReplaceClaimAsync(TUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
