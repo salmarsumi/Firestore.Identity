@@ -14,7 +14,7 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// </summary>
     /// <typeparam name="TUser">The type representing a user.</typeparam>
     /// <typeparam name="TKey">The type of the primary key for a role.</typeparam>
-    public class UserOnlyStore<TUser> : UserOnlyStore<TUser, IdentityUserClaim<string>, IdentityUserLogin<string>, IdentityUserToken<string>>
+    public class FirestoreUserOnlyStore<TUser> : FirestoreUserOnlyStore<TUser, IdentityUserClaim<string>, IdentityUserLogin<string>, IdentityUserToken<string>>
         where TUser : IdentityUser<string>, new()
     {
         /// <summary>
@@ -22,7 +22,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public UserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreUserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// <typeparam name="TUserClaim">The type representing a claim.</typeparam>
     /// <typeparam name="TUserLogin">The type representing a user external login.</typeparam>
     /// <typeparam name="TUserToken">The type representing a user token.</typeparam>
-    public class UserOnlyStore<TUser, TUserClaim, TUserLogin, TUserToken> :
+    public class FirestoreUserOnlyStore<TUser, TUserClaim, TUserLogin, TUserToken> :
         UserStoreBase<TUser, string, TUserClaim, TUserLogin, TUserToken>,
         IUserLoginStore<TUser>,
         IUserClaimStore<TUser>,
@@ -59,7 +59,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The context used to access the store.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/> used to describe store errors.</param>
-        public UserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
+        public FirestoreUserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
             _userOperations = new FirebaseUserStoreOperations<TUser, TUserLogin, TUserToken>(DB, ErrorDescriber);
