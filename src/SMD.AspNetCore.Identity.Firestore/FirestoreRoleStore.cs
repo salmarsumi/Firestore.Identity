@@ -33,7 +33,9 @@ namespace SMD.AspNetCore.Identity.Firestore
     /// <typeparam name="TRole">The type of the class representing a role.</typeparam>
     /// <typeparam name="TUserRole">The type of the class representing a user role.</typeparam>
     /// <typeparam name="TRoleClaim">The type of the class representing a role claim.</typeparam>
+#pragma warning disable CA1063 // Implement IDisposable Correctly
     public class FirestoreRoleStore<TRole, TUserRole, TRoleClaim> :
+#pragma warning restore CA1063 // Implement IDisposable Correctly
         IQueryableRoleStore<TRole>,
         IRoleClaimStore<TRole>
         where TRole : IdentityRole<string>, new()
