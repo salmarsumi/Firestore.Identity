@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,7 +23,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreRoleStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreRoleStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -47,7 +46,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreRoleStore(FirestoreDb db, IdentityErrorDescriber describer = null)
+        public FirestoreRoleStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null)
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
             ErrorDescriber = describer ?? new IdentityErrorDescriber();
@@ -59,7 +58,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <summary>
         /// Gets the database context for this store.
         /// </summary>
-        public virtual FirestoreDb DB { get; private set; }
+        public virtual IFirestoreDbContext DB { get; private set; }
 
         /// <summary>
         /// Gets or sets the <see cref="IdentityErrorDescriber"/> for any error that occurred with the current operation.
@@ -371,7 +370,9 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <summary>
         /// Dispose the stores
         /// </summary>
+#pragma warning disable CA1063 // Implement IDisposable Correctly
         public void Dispose() => _disposed = true;
+#pragma warning restore CA1063 // Implement IDisposable Correctly
 
         /// <summary>
         /// Get the claims associated with the specified <paramref name="role"/> as an asynchronous operation.

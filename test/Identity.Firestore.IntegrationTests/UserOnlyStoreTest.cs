@@ -4,9 +4,7 @@ using Microsoft.AspNetCore.Identity.Test;
 using Microsoft.Extensions.DependencyInjection;
 using SMD.AspNetCore.Identity.Firestore;
 using System;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Identity.Firestore.IntegrationTests
@@ -25,7 +23,7 @@ namespace Identity.Firestore.IntegrationTests
 
         protected override void AddUserStore(IServiceCollection services, object context = null)
         {
-            services.AddSingleton<IUserStore<TestIdentityUser>>(new FirestoreUserOnlyStore<TestIdentityUser>(_db));
+            services.AddSingleton<IUserStore<TestIdentityUser>>(new FirestoreUserOnlyStore<TestIdentityUser>(new FirestoreDbContext(_db)));
         }
 
         protected override object CreateTestContext()

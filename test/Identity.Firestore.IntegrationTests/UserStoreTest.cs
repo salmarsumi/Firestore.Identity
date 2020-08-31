@@ -23,12 +23,12 @@ namespace Identity.Firestore.IntegrationTests
 
         protected override void AddRoleStore(IServiceCollection services, object context = null)
         {
-            services.AddSingleton<IRoleStore<TestIdentityRole>>(new FirestoreRoleStore<TestIdentityRole>(_db));
+            services.AddSingleton<IRoleStore<TestIdentityRole>>(new FirestoreRoleStore<TestIdentityRole>(new FirestoreDbContext(_db)));
         }
 
         protected override void AddUserStore(IServiceCollection services, object context = null)
         {
-            services.AddSingleton<IUserStore<TestIdentityUser>>(new FirestoreUserStore<TestIdentityUser>(_db));
+            services.AddSingleton<IUserStore<TestIdentityUser>>(new FirestoreUserStore<TestIdentityUser>(new FirestoreDbContext(_db)));
         }
 
         protected override object CreateTestContext()

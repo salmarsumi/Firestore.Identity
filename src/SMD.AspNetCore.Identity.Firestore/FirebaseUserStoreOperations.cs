@@ -1,6 +1,5 @@
 ﻿using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Identity;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -14,10 +13,10 @@ namespace SMD.AspNetCore.Identity.Firestore
         where TUserLogin : IdentityUserLogin<string>, new()
         where TUserToken : IdentityUserToken<string>, new()
     {
-        private readonly FirestoreDb _db;
+        private readonly IFirestoreDbContext _db;
         private readonly IdentityErrorDescriber _errorDescriber;
 
-        public FirebaseUserStoreOperations(FirestoreDb db, IdentityErrorDescriber errorDescriber)
+        public FirebaseUserStoreOperations(IFirestoreDbContext db, IdentityErrorDescriber errorDescriber)
         {
             _db = db;
             _errorDescriber = errorDescriber;

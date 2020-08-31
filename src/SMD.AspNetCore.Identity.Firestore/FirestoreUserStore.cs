@@ -20,7 +20,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="db">The <see cref="FirestoreDb"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreUserStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreUserStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="db">The <see cref="FirestoreDb"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreUserStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreUserStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="db">The <see cref="FirestoreDb"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreUserStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreUserStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="db">The Firestore instance used to access the store.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/> used to describe store errors.</param>
-        public FirestoreUserStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
+        public FirestoreUserStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
             _userOperations = new FirebaseUserStoreOperations<TUser, TUserLogin, TUserToken>(DB, ErrorDescriber);
@@ -90,7 +90,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <summary>
         /// Gets the database instance for this store.
         /// </summary>
-        public FirestoreDb DB { get; private set; }
+        public IFirestoreDbContext DB { get; private set; }
 
         /// <summary>
         /// Firestore Collections

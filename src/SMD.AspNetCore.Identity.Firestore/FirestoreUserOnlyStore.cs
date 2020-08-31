@@ -1,5 +1,4 @@
-﻿using Google.Cloud.Firestore;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +21,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The <see cref="DbContext"/>.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/>.</param>
-        public FirestoreUserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(db, describer) { }
+        public FirestoreUserOnlyStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(db, describer) { }
     }
 
     /// <summary>
@@ -59,7 +58,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// </summary>
         /// <param name="context">The context used to access the store.</param>
         /// <param name="describer">The <see cref="IdentityErrorDescriber"/> used to describe store errors.</param>
-        public FirestoreUserOnlyStore(FirestoreDb db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
+        public FirestoreUserOnlyStore(IFirestoreDbContext db, IdentityErrorDescriber describer = null) : base(describer ?? new IdentityErrorDescriber())
         {
             DB = db ?? throw new ArgumentNullException(nameof(db));
             _userOperations = new FirebaseUserStoreOperations<TUser, TUserLogin, TUserToken>(DB, ErrorDescriber);
@@ -68,7 +67,7 @@ namespace SMD.AspNetCore.Identity.Firestore
         /// <summary>
         /// Gets the database context for this store.
         /// </summary>
-        public virtual FirestoreDb DB { get; private set; }
+        public virtual IFirestoreDbContext DB { get; private set; }
 
         /// <summary>
         /// Shared user store opertations object
