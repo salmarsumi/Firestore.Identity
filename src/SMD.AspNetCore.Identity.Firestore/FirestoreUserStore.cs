@@ -754,6 +754,28 @@ namespace SMD.AspNetCore.Identity.Firestore
         }
 
         /// <summary>
+        /// Sets the token value for a particular user.
+        /// </summary>
+        /// <param name="user">The user.</param>
+        /// <param name="loginProvider">The authentication provider for the token.</param>
+        /// <param name="name">The name of the token.</param>
+        /// <param name="value">The value of the token.</param>
+        /// <param name="cancellationToken">The System.Threading.CancellationToken used to propagate notifications that the operation should be canceled.</param>
+        /// <returns>The System.Threading.Tasks.Task that represents the asynchronous operation.</returns>
+        public override Task SetTokenAsync(TUser user, string loginProvider, string name, string value, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+
+            if (user is null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            return _userOperations.SetTokenAsync(user, loginProvider, name, value, cancellationToken);
+        }
+
+        /// <summary>
         /// Remove a new user token.
         /// </summary>
         /// <param name="token">The token to be removed.</param>

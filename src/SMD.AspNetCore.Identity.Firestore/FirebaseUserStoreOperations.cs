@@ -350,5 +350,41 @@ namespace SMD.AspNetCore.Identity.Firestore
                 await UserTokens.Document(snapshots[0].Id).DeleteAsync();
             }
         }
+
+        internal async Task SetTokenAsync(TUser user, string loginProvider, string name, string value, CancellationToken cancellationToken)
+        {
+            var token = await FindTokenAsync(user, loginProvider, name, cancellationToken).ConfigureAwait(false);
+            if (token is null)
+            {
+                var newToken = new TUserToken
+                {
+                    UserId = user.Id,
+                    LoginProvider = loginProvider,
+                    Name = name,
+                    Value = value
+                };
+
+                await AddUserTokenAsync(newToken).ConfigureAwait(false);
+            }
+            else
+            {
+                token.Value = value;
+
+                var snapshots = await UserTokens
+                    .WhereEqualTo("UserId", token.UserId)
+                    .WhereEqualTo("LoginProvider", token.LoginProvider)
+                    .WhereEqualTo("Name", token.Name)
+                    .GetSnapshotAsync()
+                    .ConfigureAwait(false);
+
+                if(snapshots.Count > 0)
+                {
+                    var docId = snapshots[0].Id;
+                    await UserTokens.Document(docId)
+                        .SetAsync(token.ToDictionary(), SetOptions.Overwrite, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
     }
 }
