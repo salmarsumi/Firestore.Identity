@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
 [assembly: InternalsVisibleTo("Identity.Firestore.Test")]
+[assembly: InternalsVisibleTo("Identity.Firestore.IntegrationTests")]
 namespace SMD.AspNetCore.Identity.Firestore
 {
     internal static class Map

@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Identity.Firestore.IntegrationTests": {
+      "commandName": "Project"
+    }
+  }
+}
