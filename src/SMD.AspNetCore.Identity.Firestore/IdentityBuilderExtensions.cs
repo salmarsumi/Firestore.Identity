@@ -44,7 +44,8 @@ namespace SMD.AspNetCore.Identity.Firestore
 
         private static void AddStores(IServiceCollection services, Type userType, Type roleType)
         {
-            if (!userType.IsSubclassOf(typeof(IdentityUser<string>)))
+            var identityUserType = FindGenericBaseType(userType, typeof(IdentityUser<string>));
+            if (identityUserType == null)
             {
                 throw new InvalidOperationException("AddFirestoreStores can only be called with a user that derives from IdentityUser<string>.");
             }
@@ -52,14 +53,14 @@ namespace SMD.AspNetCore.Identity.Firestore
             Type userStoreType;
             if (roleType != null)
             {
-                if (!roleType.IsSubclassOf(typeof(IdentityRole<string>)))
+                var identityRoleType = FindGenericBaseType(roleType, typeof(IdentityRole<string>));
+                if (identityRoleType == null)
                 {
                     throw new InvalidOperationException("AddFirestoreStores can only be called with a role that derives from IdentityRole<string>.");
                 }
 
-                Type roleStoreType = null;
                 userStoreType = typeof(FirestoreUserStore<,>).MakeGenericType(userType, roleType);
-                roleStoreType = typeof(FirestoreRoleStore<>).MakeGenericType(roleType);
+                Type roleStoreType = typeof(FirestoreRoleStore<>).MakeGenericType(roleType);
 
                 services.TryAddScoped(typeof(IUserStore<>).MakeGenericType(userType), userStoreType);
                 services.TryAddScoped(typeof(IRoleStore<>).MakeGenericType(roleType), roleStoreType);
@@ -69,6 +70,22 @@ namespace SMD.AspNetCore.Identity.Firestore
                 userStoreType = typeof(FirestoreUserOnlyStore<>).MakeGenericType(userType);
                 services.TryAddScoped(typeof(IUserStore<>).MakeGenericType(userType), userStoreType);
             }
+        }
+
+        private static TypeInfo FindGenericBaseType(Type currentType, Type genericBaseType)
+        {
+            var type = currentType;
+            while (type != null)
+            {
+                var typeInfo = type.GetTypeInfo();
+                var genericType = type.IsGenericType ? type : null;
+                if (genericType != null && genericType == genericBaseType)
+                {
+                    return typeInfo;
+                }
+                type = type.BaseType;
+            }
+            return null;
         }
     }
 }
