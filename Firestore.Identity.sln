@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C4BDD907-4E7
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Firestore.Test", "test\Identity.Firestore.Test\Identity.Firestore.Test.csproj", "{BB15534E-C14C-4578-BC77-E8ABE603160F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Firestore.IntegrationTests", "test\Identity.Firestore.IntegrationTests\Identity.Firestore.IntegrationTests.csproj", "{65C2A208-D524-4160-B36F-017AE0418E18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Firestore.IntegrationTests", "test\Identity.Firestore.IntegrationTests\Identity.Firestore.IntegrationTests.csproj", "{65C2A208-D524-4160-B36F-017AE0418E18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

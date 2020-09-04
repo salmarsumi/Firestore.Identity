@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SMD.AspNetCore.Identity.Firestore;
 using System;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Identity.Firestore.IntegrationTests
@@ -19,6 +20,60 @@ namespace Identity.Firestore.IntegrationTests
         {
             _fixture = fixture;
             _db = _fixture.DB;
+        }
+
+        [Fact]
+        public async Task DeleteUserRemovesTokensTest()
+        {
+            // Need fail if not empty?
+            var userMgr = CreateManager();
+            var user = CreateTestUser();
+            IdentityResultAssert.IsSuccess(await userMgr.CreateAsync(user));
+            IdentityResultAssert.IsSuccess(await userMgr.SetAuthenticationTokenAsync(user, "provider", "test", "value"));
+
+            Assert.Equal("value", await userMgr.GetAuthenticationTokenAsync(user, "provider", "test"));
+
+            IdentityResultAssert.IsSuccess(await userMgr.DeleteAsync(user));
+
+            Assert.Null(await userMgr.GetAuthenticationTokenAsync(user, "provider", "test"));
+        }
+
+        [Fact]
+        public async Task CanFindByName()
+        {
+            var name = Guid.NewGuid().ToString();
+            var manager = CreateManager();
+            var user = CreateTestUser(namePrefix: name, useNamePrefixAsUserName: true);
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
+            var fetch = await manager.FindByNameAsync(name);
+            Assert.Equal(user, fetch);
+        }
+
+        [Fact]
+        public async Task FindByLogin()
+        {
+            var user = CreateTestUser();
+            var manager = CreateManager();
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
+            var createdUser = await manager.FindByIdAsync(await manager.GetUserIdAsync(user));
+            IdentityResultAssert.IsSuccess(await manager.AddLoginAsync(user, new UserLoginInfo("provider", createdUser.Id.ToString(), "display")));
+            var userByLogin = await manager.FindByLoginAsync("provider", user.Id.ToString());
+            Assert.NotNull(userByLogin);
+        }
+
+        [Fact]
+        public async Task DeleteUserRemovesTokens()
+        {
+            var userMgr = CreateManager();
+            var user = CreateTestUser();
+            IdentityResultAssert.IsSuccess(await userMgr.CreateAsync(user));
+            IdentityResultAssert.IsSuccess(await userMgr.SetAuthenticationTokenAsync(user, "provider", "test", "value"));
+
+            Assert.Equal("value", await userMgr.GetAuthenticationTokenAsync(user, "provider", "test"));
+
+            IdentityResultAssert.IsSuccess(await userMgr.DeleteAsync(user));
+
+            Assert.Null(await userMgr.GetAuthenticationTokenAsync(user, "provider", "test"));
         }
 
         protected override void AddUserStore(IServiceCollection services, object context = null)
