@@ -6,8 +6,21 @@
 trigger:
 - dev
 
+resources:
+  containers:
+  - container: firestore 
+    image: mtlynch/firestore-emulator
+    ports:
+      - 8080:8080
+    env:
+      FIRESTORE_PROJECT_ID: 'project-id'
+      PORT: '8080'
+
 pool:
   vmImage: 'ubuntu-latest'
+
+services:
+  firestore: firestore
 
 variables:
   buildConfiguration: 'Release'
@@ -31,8 +44,8 @@ steps:
     projects: 'test/Identity.Firestore.IntegrationTests/Identity.Firestore.IntegrationTests.csproj'
     testRunTitle: 'Integration tests'
   env:
-    ProjectId: ''
-    FIRESTORE_EMULATOR_HOST: ''
+    ProjectId: 'project-id'
+    FIRESTORE_EMULATOR_HOST: 'firestore:8080'
 - task: DotNetCoreCLI@2
   inputs:
     command: 'publish'
