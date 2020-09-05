@@ -11,7 +11,42 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  major: '1'
+  minor: '0'
+  revision: $[counter(variables['minor'], 1)]
+  nuget_version: '$(major).$(minor).$(revision)-dev'
 
 steps:
+- script: dotnet restore
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'test'
+    projects: 'test/Identity.Firestore.Test/Identity.Firestore.Test.csproj'
+    testRunTitle: 'Unit tests'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'test'
+    projects: 'test/Identity.Firestore.IntegrationTests/Identity.Firestore.IntegrationTests.csproj'
+    testRunTitle: 'Integration tests'
+  env:
+    ProjectId: ''
+    FIRESTORE_EMULATOR_HOST: ''
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
+    publishWebProjects: false
+    projects: 'src/SMD.AspNetCore.Identity.Firestore/SMD.AspNetCore.Identity.Firestore.csproj'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'pack'
+    packagesToPack: 'src/SMD.AspNetCore.Identity.Firestore/SMD.AspNetCore.Identity.Firestore.csproj'
+    nobuild: true
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'nuget_version'
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
