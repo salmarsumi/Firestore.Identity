@@ -13,13 +13,11 @@ resources:
     ports:
       - 8080:8080
     env:
-      FIRESTORE_PROJECT_ID: 'project-id'
-      PORT: '8080'
+      FIRESTORE_PROJECT_ID: project-id
+      PORT: 8080
 
 pool:
   vmImage: 'ubuntu-latest'
-
-container: mcr.microsoft.com/dotnet/core/sdk:3.1-alpine
 
 services:
   firestore: firestore
@@ -46,8 +44,8 @@ steps:
     projects: 'test/Identity.Firestore.IntegrationTests/Identity.Firestore.IntegrationTests.csproj'
     testRunTitle: 'Integration tests'
   env:
-    ProjectId: 'project-id'
-    FIRESTORE_EMULATOR_HOST: 'firestore:8080'
+    ProjectId: project-id
+    FIRESTORE_EMULATOR_HOST: firestore:8080
 - task: DotNetCoreCLI@2
   inputs:
     command: 'publish'
