@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("Identity.Firestore.Test")]
+[assembly: InternalsVisibleTo("Identity.Firestore.IntegrationTests")]
 namespace SMD.AspNetCore.Identity.Firestore
 {
     internal class Constants

@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
-[assembly: InternalsVisibleTo("Identity.Firestore.Test")]
-[assembly: InternalsVisibleTo("Identity.Firestore.IntegrationTests")]
 namespace SMD.AspNetCore.Identity.Firestore
 {
-    internal static class Map
+    public static class Map
     {
         public static IDictionary<string, object> ToDictionary(this object source)
         {
