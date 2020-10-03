@@ -3,43 +3,45 @@ using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
 
 namespace SMD.AspNetCore.Identity.Firestore
 {
     /// <summary>
-    /// Contains extension methods to <see cref="IdentityBuilder"/> for adding entity framework stores.
+    /// Contains extension methods to <see cref="IdentityBuilder"/> for adding firestore stores.
     /// </summary>
     public static class IdentityBuilderExtensions
     {
         /// <summary>
-        /// Adds an Entity Framework implementation of identity information stores.
+        /// Adds an Firestore implementation of identity information stores.
         /// </summary>
-        /// <typeparam name="TContext">The Entity Framework database context to use.</typeparam>
         /// <param name="builder">The <see cref="IdentityBuilder"/> instance this method extends.</param>
         /// <returns>The <see cref="IdentityBuilder"/> instance this method extends.</returns>
         public static IdentityBuilder AddFirestoreStores(this IdentityBuilder builder)
         {
-            AddFirestoreDb(builder.Services);
+            AddFirestoreDbContext(builder.Services);
             AddStores(builder.Services, builder.UserType, builder.RoleType);
             return builder;
         }
 
-        private static void AddFirestoreDb(IServiceCollection services)
+        public static IdentityBuilder AddFirestoreDb(this IdentityBuilder builder, Action<FirestoreDbSettings> options)
         {
-            services.AddScoped<IFirestoreDbContext, FirestoreDbContext>(provider =>
+            var settings = new FirestoreDbSettings();
+            options.Invoke(settings);
+
+            builder.Services.AddSingleton(provider => new FirestoreDbBuilder
             {
-                var options = provider.GetRequiredService<IOptions<FirestoreDbSettings>>();
-                return new FirestoreDbContext(new FirestoreDbBuilder
-                {
-                    ProjectId = options.Value.ProjectId,
-                    EmulatorDetection = EmulatorDetection.EmulatorOrProduction
-                }.Build());
-            });
+                ProjectId = settings.ProjectId,
+                EmulatorDetection = EmulatorDetection.EmulatorOrProduction
+            }.Build());
+
+            return builder;
+        }
+
+        private static void AddFirestoreDbContext(IServiceCollection services)
+        {
+            services.AddScoped<IFirestoreDbContext, FirestoreDbContext>();
         }
 
         private static void AddStores(IServiceCollection services, Type userType, Type roleType)
